@@ -23,61 +23,79 @@
 <body>
   <h1>ブラウザ2段階認証ツール</h1>
   
-  <!-- シークレットキー入力と生成ボタン -->
   <div class="input-group">
     <label for="secret">シークレットキー:</label>
     <input type="text" id="secret" placeholder="シークレットキーを入力">
     <button id="generate-secret">キー生成</button>
   </div>
   
-  <!-- TOTP生成ボタン -->
   <button id="generate">TOTP生成</button>
-  
-  <!-- TOTP表示 -->
   <p>現在のコード: <span id="code">---</span></p>
   
-  <!-- QRコード表示 -->
   <canvas id="qrcode"></canvas>
   
   <script>
+    // ライブラリの存在を確認
+    if (typeof otplib === "undefined" || typeof QRCode === "undefined") {
+      alert("ライブラリが正しく読み込まれていません。インターネット接続を確認してください。");
+      throw new Error("ライブラリの読み込みに失敗しました");
+    }
+
     const secretInput = document.getElementById('secret');
     const codeDisplay = document.getElementById('code');
     const qrCodeCanvas = document.getElementById('qrcode');
 
     // シークレットキー生成
     document.getElementById('generate-secret').addEventListener('click', () => {
-      const secret = otplib.authenticator.generateSecret();
-      secretInput.value = secret; // シークレットキーを入力欄に表示
-      alert(`生成されたシークレットキー: ${secret}`);
+      try {
+        const secret = otplib.authenticator.generateSecret();
+        secretInput.value = secret;
+        alert(`生成されたシークレットキー: ${secret}`);
+      } catch (error) {
+        console.error("キー生成中のエラー:", error);
+        alert("キー生成中にエラーが発生しました。");
+      }
     });
 
     // TOTP生成
     document.getElementById('generate').addEventListener('click', () => {
-      const secret = secretInput.value.trim();
-      if (!secret) {
-        alert('シークレットキーを入力してください！');
-        return;
-      }
+      try {
+        const secret = secretInput.value.trim();
+        if (!secret) {
+          alert('シークレットキーを入力してください！');
+          return;
+        }
 
-      // otplibを使用してTOTPを生成
-      const totp = otplib.authenticator.generate(secret);
-      codeDisplay.textContent = totp;
-
-      // QRコードの生成
-      const otpauth = `otpauth://totp/ExampleApp?secret=${secret}`;
-      QRCode.toCanvas(qrCodeCanvas, otpauth, function (error) {
-        if (error) console.error(error);
-      });
-    });
-
-    // 定期的にコードを更新
-    setInterval(() => {
-      const secret = secretInput.value.trim();
-      if (secret) {
+        // TOTP生成
         const totp = otplib.authenticator.generate(secret);
         codeDisplay.textContent = totp;
+
+        // QRコード生成
+        const otpauth = `otpauth://totp/ExampleApp?secret=${secret}`;
+        QRCode.toCanvas(qrCodeCanvas, otpauth, function (error) {
+          if (error) {
+            console.error("QRコード生成エラー:", error);
+            alert("QRコード生成中にエラーが発生しました。");
+          }
+        });
+      } catch (error) {
+        console.error("TOTP生成中のエラー:", error);
+        alert("TOTP生成中にエラーが発生しました。");
       }
-    }, 30000); // 30秒ごとに更新
+    });
+
+    // 30秒ごとにコードを更新
+    setInterval(() => {
+      try {
+        const secret = secretInput.value.trim();
+        if (secret) {
+          const totp = otplib.authenticator.generate(secret);
+          codeDisplay.textContent = totp;
+        }
+      } catch (error) {
+        console.error("自動更新中のエラー:", error);
+      }
+    }, 30000);
   </script>
 </body>
 </html>
