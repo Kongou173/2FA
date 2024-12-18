@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ブラウザベース2FAツール</title>
+  <script src="https://cdn.jsdelivr.net/npm/otplib@12"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 20px;
+    }
+    .input-group {
+      margin: 10px 0;
+    }
+    #qrcode {
+      margin: 20px auto;
+    }
+  </style>
+</head>
+<body>
+  <h1>ブラウザ2段階認証ツール</h1>
+  <div class="input-group">
+    <label for="secret">シークレットキー:</label>
+    <input type="text" id="secret" placeholder="シークレットキーを入力">
+  </div>
+  <button id="generate">TOTP生成</button>
+  <p>現在のコード: <span id="code">---</span></p>
+  <canvas id="qrcode"></canvas>
+  
+  <script>
+    const secretInput = document.getElementById('secret');
+    const codeDisplay = document.getElementById('code');
+    const qrCodeCanvas = document.getElementById('qrcode');
+
+    // TOTP生成
+    document.getElementById('generate').addEventListener('click', () => {
+      const secret = secretInput.value.trim();
+      if (!secret) {
+        alert('シークレットキーを入力してください！');
+        return;
+      }
+
+      // otplibを使用してTOTPを生成
+      const totp = otplib.authenticator.generate(secret);
+      codeDisplay.textContent = totp;
+
+      // QRコード生成
+      const otpauth = `otpauth://totp/ExampleApp?secret=${secret}`;
+      QRCode.toCanvas(qrCodeCanvas, otpauth, function (error) {
+        if (error) console.error(error);
+      });
+    });
+
+    // 定期的にコードを更新
+    setInterval(() => {
+      const secret = secretInput.value.trim();
+      if (secret) {
+        const totp = otplib.authenticator.generate(secret);
+        codeDisplay.textContent = totp;
+      }
+    }, 30000); // 30秒ごとに更新
+  </script>
+</body>
+</html>
